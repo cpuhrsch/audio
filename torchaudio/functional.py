@@ -1369,13 +1369,28 @@ def phaser(
 
     output_waveform = torch.zeros_like(waveform, dtype=dtype, device=device)
 
+    print('mod_buf_len')
+    print(mod_buf_len)
+    print("DDD")
+    import time
+    t0 = time.monotonic()
+
+    waveform_gained = (waveform * gain_in).transpose(0, 1).contiguous()
+    delay_bufs = [delay_buf[:, i].contiguous() for i in range(delay_buf_len)]
+    output_waveforms = []
     for i in range(waveform.shape[-1]):
         idx = int((delay_pos + mod_buf[mod_pos]) % delay_buf_len)
-        temp = (waveform[:, i] * gain_in) + (delay_buf[:, idx] * decay)
+        temp = (waveform_gained[i]) + (delay_bufs[idx] * decay)
         mod_pos = (mod_pos + 1) % mod_buf_len
         delay_pos = (delay_pos + 1) % delay_buf_len
-        delay_buf[:, delay_pos] = temp
-        output_waveform[:, i] = temp * gain_out
+        delay_bufs[delay_pos] = temp
+        output_waveforms.append(temp)
+
+    output_waveform = torch.stack(output_waveforms) * gain_out
+
+    print(time.monotonic() - t0)
+
+    print("EEE")
 
     return output_waveform.clamp(min=-1, max=1).view(actual_shape)
 
