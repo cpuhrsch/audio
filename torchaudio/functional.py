@@ -1382,10 +1382,10 @@ def phaser(
         leftover_delay_buf_len = delay_buf_len
         if (i + delay_buf_len) > waveform.shape[-1]:
             leftover_delay_buf_len = waveform.shape[-1] % delay_buf_len
-        for delay_pos in range(0, leftover_delay_buf_len):
-            idx = int((delay_pos + mod_buf[mod_pos]) % delay_buf_len)
+        for _delay_pos in range(0, leftover_delay_buf_len):
+            idx = int((_delay_pos + mod_buf[mod_pos]) % delay_buf_len)
             mod_pos = (mod_pos + 1) % mod_buf_len
-            # delay_pos = (delay_pos + 1) % delay_buf_len
+            delay_pos = (_delay_pos + 1) % delay_buf_len
             delay_buf_t[delay_pos] = (waveform_gained[i + delay_pos]) + (delay_buf_t[idx] * decay)
         tmp_output = output_waveform[:, i:i + leftover_delay_buf_len]
         tmp_oo = delay_buf_t.transpose(0, 1)[:, :leftover_delay_buf_len]
