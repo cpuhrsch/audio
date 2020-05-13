@@ -1376,17 +1376,35 @@ def phaser(
     t0 = time.monotonic()
 
     waveform_gained = (waveform * gain_in).transpose(0, 1).contiguous()
+    # delay_bufs = [delay_buf[:, i].contiguous() for i in range(delay_buf_len)]
     delay_buf_t = delay_buf.transpose(0, 1).contiguous()
-    output_waveforms = []
-    for i in range(waveform.shape[-1]):
-        idx = int((delay_pos + mod_buf[mod_pos]) % delay_buf_len)
-        mod_pos = (mod_pos + 1) % mod_buf_len
-        delay_pos = (delay_pos + 1) % delay_buf_len
-        if delay_pos == 0:
-            output_waveforms.append(delay_buf_t.transpose(0, 1).clone())
-        delay_buf_t[delay_pos] = (waveform_gained[i]) + (delay_buf_t[idx] * decay)
+    output_waveform = torch.zeros((1, waveform.shape[-1]))
+    print('output_waveform.shape')
+    print(output_waveform.shape)
+    for i in range(0, waveform.shape[-1], delay_buf_len):
+        leftover_delay_buf_len = delay_buf_len
+        if (i + delay_buf_len) > waveform.shape[-1]:
+            leftover_delay_buf_len = waveform.shape[-1] % delay_buf_len
+        for delay_pos in range(0, leftover_delay_buf_len):
+            idx = int((delay_pos + mod_buf[mod_pos]) % delay_buf_len)
+            mod_pos = (mod_pos + 1) % mod_buf_len
+            # delay_pos = (delay_pos + 1) % delay_buf_len
+            delay_buf_t[delay_pos] = (waveform_gained[i + delay_pos]) + (delay_buf_t[idx] * decay)
+        # print('leftover_delay_buf_len')
+        # print(leftover_delay_buf_len)
+        # print('i')
+        # print(i)
+        tmp_output = output_waveform[:, i:i + leftover_delay_buf_len]
+        # print('tmp_output.shape')
+        # print(tmp_output.shape)
+        # print('delay_buf_t.shape')
+        # print(delay_buf_t.shape)
+        tmp_oo = delay_buf_t.transpose(0, 1)[:, :leftover_delay_buf_len]
+        # print('tmp_oo.shape')
+        # print(tmp_oo.shape)
+        output_waveform[:, i:i + leftover_delay_buf_len] = tmp_oo
 
-    output_waveform = torch.cat(output_waveforms) * gain_out
+    output_waveform = output_waveform * gain_out
 
     print(time.monotonic() - t0)
 
